@@ -34,4 +34,31 @@ struct LiveEnumerationTests {
         #expect(!recognized.isEmpty,
                 "No known service matched — resolver registry may be misconfigured")
     }
+
+    @Test("Resolved process names contain no lsof \\x20 escapes")
+    func noEscapedSpaces() async throws {
+        let entries = try await LsofPortEnumerator().listListeningTCP()
+        for entry in entries {
+            if let name = entry.processName {
+                #expect(!name.contains("\\x20"),
+                        "process name '\(name)' still has a raw \\x20 escape")
+            }
+        }
+    }
+
+    @Test("Spaces in process names are preserved literally through the F0 parser")
+    func preservesSpacesInName() {
+        let raw = "\np1234\0cCode Helper\0Lme\0tIPv4\0n127.0.0.1:3000\0"
+        let entries = LsofPortEnumerator.parse(raw)
+        #expect(entries.count == 1)
+        #expect(entries.first?.processName == "Code Helper")
+        #expect(entries.first?.port == 3000)
+        #expect(entries.first?.pid == 1234)
+    }
+
+    @Test("Parses IPv6 bracketed addresses")
+    func parsesIPv6() {
+        #expect(LsofPortEnumerator.parseAddress("[::1]:8787")?.0 == 8787)
+        #expect(LsofPortEnumerator.parseAddress("[::1]:8787")?.1 == "::1")
+    }
 }

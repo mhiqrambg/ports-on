@@ -4,19 +4,18 @@ import Foundation
 
 @Suite("LsofParser")
 struct LsofParserTests {
-    @Test("Parses a real lsof LISTEN row into a PortEntry")
-    func parseRow() {
-        let text = """
-        COMMAND     PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
-        ControlCe   660   mhiqrambg   10u  IPv4 0x8ce1 0t0 TCP *:7000 (LISTEN)
-        node      13372   mhiqrambg   22u  IPv4 0x2ea5 0t0 TCP 127.0.0.1:49532 (LISTEN)
-        rapportd   702    root        5u   IPv6 0x1111 0t0 TCP *:58687 (LISTEN)
-        """
+    @Test("Parses an lsof -F0 LISTEN record into PortEntry values")
+    func parseRecords() {
+        // Mirrors real `lsof -nP -iTCP -sTCP:LISTEN -F0pnLct` output.
+        let text = "\0p660\0cControlCenter\0Lmhiqrambg\0f10\0tIPv4\0n*:7000\0"
+                 + "\0f11\0tIPv6\0n*:7000\0"
+                 + "\0p13372\0cnode\0Lmhiqrambg\0f22\0tIPv4\0n127.0.0.1:49532\0"
+                 + "\0p702\0crapportd\0Lroot\0f5\0tIPv6\0n*:58687\0"
 
         let entries = LsofPortEnumerator.parse(text)
-        #expect(entries.count == 3)
+        #expect(entries.count == 4)
 
-        let control = entries.first { $0.processName == "ControlCe" }!
+        let control = entries.first { $0.processName == "ControlCenter" }!
         #expect(control.port == 7000)
         #expect(control.bindAddress == "0.0.0.0")
         #expect(control.isPubliclyBound)
@@ -27,26 +26,30 @@ struct LsofParserTests {
         #expect(node.bindAddress == "127.0.0.1")
         #expect(!node.isPubliclyBound)
 
-        let v6 = entries.first { $0.addressFamily == .ipv6 }!
+        let v6 = entries.first { $0.addressFamily == .ipv6 && $0.processName == "rapportd" }!
         #expect(v6.port == 58687)
     }
 
-    @Test("Dedupes IPv4/IPv6 duplicates on the same port")
+    @Test("Dedupes IPv4/IPv6 duplicates on the same port and pid")
     func dedupes() {
-        let text = """
-        COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
-        a 1 u 10u IPv4 0x1 0t0 TCP *:80 (LISTEN)
-        a 1 u 11u IPv6 0x2 0t0 TCP *:80 (LISTEN)
-        """
+        let text = "\0p1\0ca\0Lu\0tIPv4\0n*:80\0\0tIPv6\0n*:80\0"
         let entries = LsofPortEnumerator.parse(text)
-        // IPv4 and IPv6 on same port are distinct entries (different af), so 2.
         #expect(entries.count == 2)
     }
 
-    @Test("Skips malformed rows without crashing")
+    @Test("Skips garbage fields and rows with no parseable address")
     func skipsMalformed() {
-        let entries = LsofPortEnumerator.parse("garbage\n\nshort row\na b c")
+        let entries = LsofPortEnumerator.parse("garbage\0\0p1\0ca\0nnonsense\0")
         #expect(entries.isEmpty)
+    }
+
+    @Test("Spaces in process names are preserved literally")
+    func preservesSpaces() {
+        let text = "\0p1234\0cCode Helper\0Lme\0tIPv4\0n127.0.0.1:3000\0"
+        let entries = LsofPortEnumerator.parse(text)
+        #expect(entries.count == 1)
+        #expect(entries.first?.processName == "Code Helper")
+        #expect(entries.first?.port == 3000)
     }
 
     @Test("parseAddress handles loopback, wildcard, and IPv6 brackets")
@@ -55,8 +58,8 @@ struct LsofParserTests {
         #expect(loopback?.0 == 3000 && loopback?.1 == "127.0.0.1")
         let wildcard = LsofPortEnumerator.parseAddress("*:80")
         #expect(wildcard?.0 == 80 && wildcard?.1 == "0.0.0.0")
-        let v6 = LsofPortEnumerator.parseAddress(":::8080")
-        #expect(v6?.0 == 8080 && v6?.1 == "::")
+        let v6 = LsofPortEnumerator.parseAddress("[::1]:8787")
+        #expect(v6?.0 == 8787 && v6?.1 == "::1")
         #expect(LsofPortEnumerator.parseAddress("nope") == nil)
     }
 }
