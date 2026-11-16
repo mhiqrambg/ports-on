@@ -1,9 +1,8 @@
 # SwiftPM build artifacts
-PortsOn/.build/
 .build/
 
 # macOS noise
 .DS_Store
 
 # App bundle produced by bundle.sh
-PortsOn/*.app
+*.app

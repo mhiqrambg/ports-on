@@ -12,8 +12,9 @@ distribution still needs signing.
 
 ## Build & run
 
+From the repo root:
+
 ```bash
-cd PortsOn
 swift build                 # compile
 swift test                  # unit + live integration tests
 ./bundle.sh                 # bundle into "Ports On.app"
@@ -41,4 +42,4 @@ Requirements: Xcode with the macOS 26 SDK, Apple Silicon. Targets `macosx26.0`.
 - TCP only for v1.
 - Stop limited to processes you own; privileged (root) stop is deferred to v1.1 (decision D-1).
 
-Full planning set lives in `../.planning/`.
+Full planning set lives in `.planning/`.
