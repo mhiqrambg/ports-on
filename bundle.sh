@@ -2,12 +2,11 @@
 # Bundle the compiled Ports On executable into a minimal .app for running.
 # Usage: ./bundle.sh
 set -euo pipefail
-
-APP_NAME="Ports On"
-BUNDLE_ID="dev.mhiqram.portson"
 CONFIG="${1:-debug}"
-BIN=".build/out/Products/Debug/PortsOn"
-[[ "$CONFIG" == "release" ]] && BIN=".build/out/Products/Release/PortsOn"
+BUNDLE_ID="dev.mhiqram.portson"
+APP_NAME="Ports On"
+BIN=".build/debug/PortsOn"
+[[ "$CONFIG" == "release" ]] && BIN=".build/release/PortsOn"
 
 echo "Building ($CONFIG)…"
 swift build -c "$CONFIG"
