@@ -6,3 +6,9 @@
 
 # App bundle produced by bundle.sh
 *.app
+
+# Xcode
+xcuserdata/
+*.xcuserdatad/
+*.xcuserstate
+*.xcodeproj/xcuserdata/
