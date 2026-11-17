@@ -1,0 +1,53 @@
+name: Release
+
+# Build a universal (arm64 + x86_64) app and attach it to a GitHub Release.
+# Trigger: push a version tag, e.g. v0.1.0
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and release
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Swift and SDK
+        run: |
+          swift --version
+          xcrun --sdk macosx --show-sdk-version
+
+      - name: Build universal binary
+        run: swift build -c release --arch arm64 --arch x86_64
+
+      - name: Run tests
+        run: swift test
+
+      - name: Bundle app
+        run: ./bundle.sh release
+
+      - name: Verify architectures
+        run: lipo -archs ".build/Ports On.app/Contents/MacOS/PortsOn"
+
+      - name: Zip app for release
+        run: |
+          cd ".build"
+          ditto -c -k --sequesterRsrc --keepParent "Ports On.app" "Ports On.app.zip"
+          shasum -a 256 "Ports On.app.zip" > "Ports On.app.zip.sha256"
+
+      - name: Create release and upload artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            ".build/Ports On.app.zip" \
+            ".build/Ports On.app.zip.sha256" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
