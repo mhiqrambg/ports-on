@@ -79,22 +79,36 @@ struct PortListView: View {
                     .font(.body.weight(.medium))
             }
             TableColumn("Service") { row in
-                Label(row.serviceLabel, systemImage: iconName(for: row))
-                    .lineLimit(1)
+                if row.serviceId != nil {
+                    Label(row.serviceLabel, systemImage: iconName(for: row))
+                        .lineLimit(1)
+                } else {
+                    Text("—")
+                        .foregroundStyle(.tertiary)
+                        .help("Unrecognized — see Process column")
+                }
             }
             TableColumn("Process") { row in
                 Text(row.entry.processName ?? "—")
+                    .lineLimit(1)
+                    .help(row.entry.processName ?? "")
             }
             TableColumn("PID") { row in
                 Text(row.entry.pid.map(String.init) ?? "—")
                     .monospacedDigit()
             }
             TableColumn("Bind") { row in
-                Text(row.entry.isPubliclyBound ? row.entry.bindAddress : "\(row.entry.bindAddress)")
-                    .foregroundStyle(row.entry.isPubliclyBound ? .primary : .secondary)
-                    .help(row.entry.isPubliclyBound
-                          ? "Bound to all interfaces (reachable from other machines)"
-                          : "Bound to loopback or a specific interface")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(row.entry.bindAddress)
+                        .foregroundStyle(row.entry.isPubliclyBound ? .primary : .secondary)
+                        .monospacedDigit()
+                    Text(row.entry.familyLabel)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .help(row.entry.isPubliclyBound
+                      ? "Bound to all interfaces (reachable from other machines)"
+                      : "Bound to loopback or a specific interface")
             }
             TableColumn("User") { row in
                 Text(row.entry.user ?? "—")

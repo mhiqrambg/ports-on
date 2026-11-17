@@ -70,7 +70,7 @@ public struct LsofPortEnumerator: PortEnumerating {
             guard let name, let (port, bind) = LsofPortEnumerator.parseAddress(name) else { return nil }
             return PortEntry(
                 port: port,
-                addressFamily: family,
+                addressFamilies: [family],
                 bindAddress: bind,
                 pid: pid,
                 processName: command,
@@ -79,12 +79,29 @@ public struct LsofPortEnumerator: PortEnumerating {
         }
     }
 
+    /// Merge `other` into `base`: union the address families, prefer a wildcard bind.
+    /// A service listening on both IPv4 (`*:port`) and IPv6 (`::port`) collapses to one
+    /// row bound on all interfaces.
+    private static func merge(_ base: inout PortEntry, _ other: PortEntry) {
+        let families = base.addressFamilies.union(other.addressFamilies)
+        let bind = (base.isPubliclyBound ? base.bindAddress : other.bindAddress)
+        base = PortEntry(
+            port: base.port,
+            addressFamilies: families,
+            bindAddress: bind,
+            pid: base.pid,
+            processName: base.processName,
+            user: base.user
+        )
+    }
+
     /// Parse the NUL-delimited `lsof -F0` stream into entries. Fields are single-char
     /// prefixed: p(pid) c(command) L(login) t(type) n(name) f(fd). A `p` starts a new
-    /// process record; each `f`+`t`+`n` after it is one socket.
+    /// process record; each `f`+`t`+`n` after it is one socket. Sockets on the same
+    /// (port, pid) are merged into a single dual-stack row.
     static func parse(_ text: String) -> [PortEntry] {
-        var entries: [PortEntry] = []
-        var seen = Set<String>()
+        var merged: [String: PortEntry] = [:]
+        var order: [String] = []
         var pending = Pending()
 
         // The stream is NUL-separated; lsof starts each process record with a newline
@@ -95,7 +112,7 @@ public struct LsofPortEnumerator: PortEnumerating {
             let value = String(field.dropFirst())
             switch first {
             case "p":
-                // New process: flush nothing (sockets emit as we go), reset socket state.
+                // New process record; reset socket state.
                 pending.pid = pid_t(value)
                 pending.family = .ipv4
                 pending.name = nil
@@ -107,10 +124,14 @@ public struct LsofPortEnumerator: PortEnumerating {
                 pending.family = value.uppercased().contains("V6") ? .ipv6 : .ipv4
             case "n":
                 pending.name = value
-                if let entry = pending.makeEntry() {
-                    let id = "\(entry.addressFamily.rawValue)-\(entry.port)-\(entry.pid.map(String.init) ?? "?")-\(entry.bindAddress)"
-                    if seen.insert(id).inserted {
-                        entries.append(entry)
+                if var entry = pending.makeEntry() {
+                    let key = "\(entry.port)-\(entry.pid.map(String.init) ?? "?")-\(entry.user ?? "")"
+                    if var existing = merged[key] {
+                        merge(&existing, entry)
+                        merged[key] = existing
+                    } else {
+                        merged[key] = entry
+                        order.append(key)
                     }
                 }
                 pending.name = nil
@@ -118,7 +139,7 @@ public struct LsofPortEnumerator: PortEnumerating {
                 break // f (fd), and anything else, ignore
             }
         }
-        return entries
+        return order.compactMap { merged[$0] }
     }
 
 
