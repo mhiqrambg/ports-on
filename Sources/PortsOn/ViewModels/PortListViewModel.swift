@@ -11,18 +11,27 @@ public final class PortListViewModel {
         case loaded
         case error(String)
     }
-
-    public struct Row: Identifiable, Hashable {
+    public struct Row: Identifiable, Hashable, Comparable {
         public let entry: PortEntry
-        public let serviceLabel: String
-        public let serviceId: String?
         public let canStop: Bool
 
         public var id: String { entry.id }
+
+        /// Display name: the real process name as lsof reported it. No guessed service labels.
+        public var displayName: String {
+            entry.processName ?? "unknown"
+        }
+
+        // Sort keys (used by Table column-title sorting).
+        public var port: UInt16 { entry.port }
+        public var pid: pid_t { entry.pid ?? pid_t.max }
+        public var bindAddress: String { entry.bindAddress }
+        public var user: String { entry.user ?? "" }
+
+        public static func < (lhs: Row, rhs: Row) -> Bool { lhs.port < rhs.port }
     }
 
     @ObservationIgnored private let enumerator: PortEnumerating
-    private let resolver = ServiceResolver()
     private let currentUID = getuid()
     private let stopService = StopService()
 
@@ -41,9 +50,9 @@ public final class PortListViewModel {
         guard !filter.isEmpty else { return rows }
         let q = filter.lowercased()
         return rows.filter {
-            $0.serviceLabel.lowercased().contains(q)
-            || String($0.entry.port).contains(q)
-            || ($0.entry.processName?.lowercased().contains(q) ?? false)
+            String($0.entry.port).contains(q)
+            || $0.displayName.lowercased().contains(q)
+            || ($0.entry.user?.lowercased().contains(q) ?? false)
         }
     }
 
@@ -71,10 +80,7 @@ public final class PortListViewModel {
             let entries = try await enumerator.listListeningTCP()
             let currentUsername = ProcessInfo.processInfo.userName
             rows = entries.map { entry in
-                let (label, svc) = resolver.resolve(entry)
-                let canStop = entry.user == currentUsername
-                return Row(entry: entry, serviceLabel: label,
-                           serviceId: svc?.id, canStop: canStop)
+                Row(entry: entry, canStop: entry.user == currentUsername)
             }
             lastUpdated = Date()
             phase = .loaded

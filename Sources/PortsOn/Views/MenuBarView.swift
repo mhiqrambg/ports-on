@@ -8,7 +8,7 @@ struct MenuBarView: View {
     var body: some View {
         VStack(spacing: 14) {
             VStack(spacing: 4) {
-                Text("\(viewModel.activeCount)")
+                Text(verbatim: String(viewModel.activeCount))
                     .font(.system(size: 40, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .contentTransition(.numericText())

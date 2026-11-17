@@ -6,6 +6,8 @@ struct PortListView: View {
     @Bindable var viewModel: PortListViewModel
     @State private var confirmStop: PortListViewModel.Row?
     @State private var statusMessage: String?
+    /// Column sort state, driven by clicking column titles. Empty = insertion order.
+    @State private var sortOrder = [KeyPathComparator<PortListViewModel.Row>]()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,7 +51,7 @@ struct PortListView: View {
 
     private var stopTitle: String {
         guard let row = confirmStop else { return "Stop process?" }
-        return "Stop “\(row.serviceLabel)” (port \(row.entry.port))?"
+        return "Stop “\(row.displayName)” (port \(row.entry.port))?"
     }
 
     @ViewBuilder
@@ -72,34 +74,24 @@ struct PortListView: View {
     }
 
     private var portsTable: some View {
-        Table(viewModel.filteredRows, selection: .constant(nil)) {
-            TableColumn("Port") { row in
-                Text("\(row.entry.port)")
+        Table(sortOrder: $sortOrder) {
+            TableColumn("Port", value: \.port) { row in
+                Text(verbatim: String(row.entry.port))
                     .monospacedDigit()
                     .font(.body.weight(.medium))
             }
-            TableColumn("Service") { row in
-                if row.serviceId != nil {
-                    Label(row.serviceLabel, systemImage: iconName(for: row))
-                        .lineLimit(1)
-                } else {
-                    Text("—")
-                        .foregroundStyle(.tertiary)
-                        .help("Unrecognized — see Process column")
-                }
-            }
-            TableColumn("Process") { row in
-                Text(row.entry.processName ?? "—")
+            TableColumn("Process", value: \.displayName) { row in
+                Label(row.displayName, systemImage: iconName(for: row.displayName))
                     .lineLimit(1)
-                    .help(row.entry.processName ?? "")
+                    .help(row.displayName)
             }
-            TableColumn("PID") { row in
-                Text(row.entry.pid.map(String.init) ?? "—")
+            TableColumn("PID", value: \.pid) { row in
+                Text(verbatim: row.entry.pid.map(String.init) ?? "—")
                     .monospacedDigit()
             }
-            TableColumn("Bind") { row in
+            TableColumn("Bind", value: \.bindAddress) { row in
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(row.entry.bindAddress)
+                    Text(verbatim: row.bindAddress)
                         .foregroundStyle(row.entry.isPubliclyBound ? .primary : .secondary)
                         .monospacedDigit()
                     Text(row.entry.familyLabel)
@@ -110,7 +102,7 @@ struct PortListView: View {
                       ? "Bound to all interfaces (reachable from other machines)"
                       : "Bound to loopback or a specific interface")
             }
-            TableColumn("User") { row in
+            TableColumn("User", value: \.user) { row in
                 Text(row.entry.user ?? "—")
             }
             TableColumn("Actions") { row in
@@ -124,18 +116,29 @@ struct PortListView: View {
                         .help("Only your own processes can be stopped")
                 }
             }
+        } rows: {
+            ForEach(sortedRows) { row in
+                TableRow(row)
+            }
         }
     }
 
-    private func iconName(for row: PortListViewModel.Row) -> String {
-        switch row.serviceId {
+    /// `filteredRows` re-ordered by the current column sort. Clicking a title toggles asc/desc.
+    private var sortedRows: [PortListViewModel.Row] {
+        viewModel.filteredRows.sorted(using: sortOrder)
+    }
+
+    /// Icon is a visual hint keyed off the real process name — purely cosmetic, not a claim
+    /// about what the process is. Anything unrecognized gets a plain dot.
+    private func iconName(for processName: String) -> String {
+        switch processName.lowercased() {
         case "nginx": return "server.rack"
-        case "docker": return "shippingbox"
-        case "nodejs", "nextjs", "astro", "vite": return "curlybraces"
-        case "postgres", "mysql", "mongodb", "redis": return "cylinder"
-        case "airplay": return "airplayaudio"
+        case "docker", "dockerd", "com.docker.backend": return "shippingbox"
+        case "node": return "curlybraces"
+        case "postgres", "mysqld", "mongod", "redis-server": return "cylinder"
+        case "controlcenter": return "airplayaudio"
         case "sshd": return "lock.shield"
-        case "wrangler": return "cloud"
+        case "workerd": return "cloud"
         case "omp", "opencode": return "cpu"
         default: return "dot"
         }

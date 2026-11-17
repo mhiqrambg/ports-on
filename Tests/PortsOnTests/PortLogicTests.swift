@@ -73,68 +73,6 @@ struct LsofParserTests {
     }
 }
 
-@Suite("ServiceResolver")
-struct ServiceResolverTests {
-    let resolver = ServiceResolver()
-
-    @Test("Resolves by known port when the process name is generic")
-    func byPort() {
-        // A generic process name on a genuinely-fixed IANA port falls back to the port hint.
-        let entry = PortEntry(port: 5432, addressFamilies: [.ipv4], bindAddress: "0.0.0.0",
-                              pid: 100, processName: "somebinary", user: "me")
-        let (label, service) = resolver.resolve(entry)
-        #expect(label == "PostgreSQL")
-        #expect(service?.id == "postgres")
-    }
-
-    @Test("Resolves by process name fingerprint when port is unknown")
-    func byProcessName() {
-        let entry = PortEntry(port: 45678, addressFamilies: [.ipv4], bindAddress: "127.0.0.1",
-                              pid: 200, processName: "redis-server", user: "me")
-        let (label, service) = resolver.resolve(entry)
-        #expect(label == "Redis")
-        #expect(service?.id == "redis")
-    }
-
-    @Test("Falls back to raw process name for unknown services")
-    func fallback() {
-        let entry = PortEntry(port: 49999, addressFamilies: [.ipv4], bindAddress: "127.0.0.1",
-                              pid: 300, processName: "myweirdthing", user: "me")
-        let (label, service) = resolver.resolve(entry)
-        #expect(label == "myweirdthing")
-        #expect(service == nil)
-    }
-
-    @Test("Process name match resolves even when the port is not a known default")
-    func processNameResolvesOnAnyPort() {
-        // opencode serve defaults to 4096 but accepts --port; the process name resolves it
-        // regardless of which port it actually binds. This is why names outrank port hints.
-        let entry = PortEntry(port: 4096, addressFamilies: [.ipv4], bindAddress: "127.0.0.1",
-                              pid: 91718, processName: "opencode", user: "me")
-        let (label, service) = resolver.resolve(entry)
-        #expect(label == "OpenCode")
-        #expect(service?.id == "opencode")
-    }
-
-    @Test("Known-port hint applies when the process name is unrecognized")
-    func knownPortFallback() {
-        // Generic process name on a genuinely-fixed IANA port.
-        let entry = PortEntry(port: 27017, addressFamilies: [.ipv4], bindAddress: "127.0.0.1",
-                              pid: 500, processName: "somebinary", user: "me")
-        let (label, service) = resolver.resolve(entry)
-        #expect(label == "MongoDB")
-        #expect(service?.id == "mongodb")
-    }
-
-    @Test("Fallback uses the basename of a path-like name")
-    func fallbackBasename() {
-        let entry = PortEntry(port: 49998, addressFamilies: [.ipv4], bindAddress: "127.0.0.1",
-                              pid: 400, processName: "/usr/local/bin/myapp", user: "me")
-        let (label, service) = resolver.resolve(entry)
-        #expect(label == "myapp")
-        #expect(service == nil)
-    }
-}
 
 @Suite("StopService")
 struct StopServiceTests {
