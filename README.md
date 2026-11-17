@@ -10,8 +10,21 @@ A menu bar and window app for macOS that lists every TCP port currently listenin
 
 ## Status
 
-Early MVP. The enumeration and stop paths work and are covered by tests. It has not been signed or notarized, so distributing it to other people still needs that work.
+Early MVP. The enumeration and stop paths work and are covered by tests. It has not been signed or notarized, so macOS Gatekeeper blocks it on first launch. See [First launch](#first-launch).
 
+## First launch
+
+Because the app is unsigned, macOS shows a "Ports On" Not Opened warning the first time you open a downloaded copy. The app itself is fine; this is Gatekeeper doing its default check. Open it once with any of these, and after that it launches normally.
+
+- Right-click **Ports On** in Applications, choose **Open**, then **Open** again in the dialog.
+- Or open **System Settings → Privacy & Security**, find the mention of Ports On, and click **Open Anyway**.
+- Or clear the quarantine flag from the terminal:
+
+```bash
+xattr -d com.apple.quarantine "/Applications/Ports On.app"
+```
+
+Removing the warning for everyone, rather than just your own Mac, needs an Apple Developer ID plus notarization. That is separate distribution work.
 ## Build and run
 
 From the repo root:
