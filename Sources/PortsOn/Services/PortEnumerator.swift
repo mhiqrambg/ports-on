@@ -124,7 +124,7 @@ public struct LsofPortEnumerator: PortEnumerating {
                 pending.family = value.uppercased().contains("V6") ? .ipv6 : .ipv4
             case "n":
                 pending.name = value
-                if var entry = pending.makeEntry() {
+                if let entry = pending.makeEntry() {
                     let key = "\(entry.port)-\(entry.pid.map(String.init) ?? "?")-\(entry.user ?? "")"
                     if var existing = merged[key] {
                         merge(&existing, entry)

@@ -8,8 +8,8 @@ APP_NAME="Ports On"
 BIN=".build/debug/PortsOn"
 [[ "$CONFIG" == "release" ]] && BIN=".build/release/PortsOn"
 
-echo "Building ($CONFIG)…"
-swift build -c "$CONFIG"
+echo "Building ($CONFIG, universal arm64+x86_64)…"
+swift build -c "$CONFIG" --arch arm64 --arch x86_64
 
 APP=".build/$APP_NAME.app"
 rm -rf "$APP"
@@ -35,5 +35,6 @@ PLIST
 
 cp "$BIN" "$APP/Contents/MacOS/PortsOn"
 
+echo "Architectures: $(lipo -archs "$APP/Contents/MacOS/PortsOn")"
 echo "Bundled: $APP"
 echo "Run it with: open \"$APP\""

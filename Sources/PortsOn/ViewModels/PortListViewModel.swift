@@ -58,15 +58,23 @@ public final class PortListViewModel {
 
     public var activeCount: Int { rows.count }
 
+    /// Start the poll loop. Cancels any prior loop and waits for it to finish, so changing
+    /// the interval from Settings never leaves two loops running at once.
     public func startPolling(interval: TimeInterval = 2.0) {
         pollTask?.cancel()
+        let previous = pollTask
         pollTask = Task { [weak self] in
-            await self?.refresh()
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(interval))
-                guard !Task.isCancelled else { break }
-                await self?.refresh()
-            }
+            _ = await previous?.value
+            await self?.pollLoop(interval: interval)
+        }
+    }
+
+    private func pollLoop(interval: TimeInterval) async {
+        await refresh()
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(interval))
+            guard !Task.isCancelled else { break }
+            await refresh()
         }
     }
 
