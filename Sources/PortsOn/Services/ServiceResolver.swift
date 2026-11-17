@@ -22,7 +22,10 @@ public struct ServiceResolver: Sendable {
            }) {
             return (byProc.displayName, byProc)
         }
-        // 3. fallback: raw process name
-        return (entry.processName ?? "unknown", nil)
+        // 3. fallback: short basename of the process (lsof already gives a clean name,
+        //    but be defensive in case a path ever sneaks in).
+        let raw = entry.processName ?? "unknown"
+        let base = (raw as NSString).lastPathComponent
+        return (base.isEmpty ? raw : base, nil)
     }
 }

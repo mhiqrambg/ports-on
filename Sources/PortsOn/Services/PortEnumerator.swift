@@ -12,12 +12,13 @@ public protocol PortEnumerating: Sendable {
 }
 
 /// Primary implementation: run `lsof -nP -iTCP -sTCP:LISTEN -F0pnLct` and parse its
-/// NUL-delimited `-F` output, then resolve full process names via `ps`.
+/// NUL-delimited `-F` output.
 ///
-/// Why not the human-column format: lsof truncates the COMMAND column to ~9 chars and
-/// escapes spaces as `\x20`, so a process like "Code Helper" rendered as `Code\x20H` and
-/// broke naive space-splitting. The `-F0` format carries each field verbatim (spaces and
-/// all) with no truncation ambiguity, and `ps -p PID -o comm=` gives the full name.
+/// lsof's `c` field in `-F0` mode carries the full, unescaped process name (e.g.
+/// "Code Helper (Plugin)", "Google Chrome for Testing"). This is the cleanest source:
+/// the human-column format truncates to ~9 chars and escapes spaces as `\x20`, and
+/// `ps -o comm=` returns a full path while `ucomm=` truncates to 15 chars — so neither
+/// ps variant is usable for display. We trust lsof's `c` field directly.
 /// ADR-002's sysctl/libproc primary isn't safely doable in a first cut, so lsof ships
 /// behind the `PortEnumerating` seam (swap later).
 public struct LsofPortEnumerator: PortEnumerating {
@@ -25,9 +26,7 @@ public struct LsofPortEnumerator: PortEnumerating {
 
     public func listListeningTCP() async throws -> [PortEntry] {
         let raw = try Self.runLsof()
-        var entries = Self.parse(raw)
-        Self.resolveProcessNames(&entries)
-        return entries
+        return Self.parse(raw)
     }
 
     // MARK: - lsof invocation
@@ -138,47 +137,4 @@ public struct LsofPortEnumerator: PortEnumerating {
         return (port, bind)
     }
 
-    // MARK: - full process-name resolution
-
-    /// lsof's `c` field truncates long command names. For each distinct PID, ask `ps` for
-    /// the full name and patch it in. Missing PIDs (exited between scans) keep lsof's value.
-    static func resolveProcessNames(_ entries: inout [PortEntry]) {
-        let pids = Array(Set(entries.compactMap(\.pid)))
-        guard !pids.isEmpty else { return }
-        let names = fullNames(for: pids)
-        guard !names.isEmpty else { return }
-        entries = entries.map { entry in
-            guard let pid = entry.pid, let full = names[pid] else { return entry }
-            return PortEntry(
-                port: entry.port, addressFamily: entry.addressFamily,
-                bindAddress: entry.bindAddress, pid: pid,
-                processName: full, user: entry.user
-            )
-        }
-    }
-
-    /// One `ps` call for all PIDs. Returns pid -> full command name.
-    static func fullNames(for pids: [pid_t]) -> [pid_t: String] {
-        var result: [pid_t: String] = [:]
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-p", pids.map(String.init).joined(separator: ","), "-o", "pid=,comm="]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        guard (try? process.run()) != nil else { return result }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0,
-              let text = String(data: data, encoding: .utf8) else { return result }
-        for line in text.split(separator: "\n") {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard let space = trimmed.firstIndex(of: " ") else { continue }
-            let pidPart = String(trimmed[trimmed.startIndex..<space])
-            let namePart = String(trimmed[trimmed.index(after: space)...]).trimmingCharacters(in: .whitespaces)
-            guard let pid = pid_t(pidPart) else { continue }
-            result[pid] = namePart
-        }
-        return result
-    }
 }
