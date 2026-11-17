@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Menu bar popover, kept deliberately simple: the active port count plus a button
-/// to open the full window. No list here — the window is the detail surface.
+/// Menu bar popover: the active port count plus actions. No list here — the window is the
+/// detail surface.
 struct MenuBarView: View {
     @Bindable var viewModel: PortListViewModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 14) {
@@ -21,10 +22,9 @@ struct MenuBarView: View {
             Divider()
 
             Button {
+                // Reliable on modern macOS: reveal the named window, then bring the app forward.
+                openWindow(id: "main")
                 NSApp.activate(ignoringOtherApps: true)
-                for window in NSApp.windows where window.canBecomeMain {
-                    window.makeKeyAndOrderFront(nil)
-                }
             } label: {
                 Label("Open", systemImage: "arrow.up.forward.app")
             }
@@ -32,14 +32,7 @@ struct MenuBarView: View {
             .controlSize(.large)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button {
-                // Present the app's Settings scene.
-                if #available(macOS 14.0, *) {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                } else {
-                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-                }
-            } label: {
+            SettingsLink {
                 Label("Settings", systemImage: "gearshape")
             }
             .controlSize(.large)
