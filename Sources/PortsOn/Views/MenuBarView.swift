@@ -29,6 +29,14 @@ struct MenuBarView: View {
             .keyboardShortcut(.defaultAction)
             .controlSize(.large)
             .frame(maxWidth: .infinity)
+
+            Button(role: .destructive) {
+                NSApp.terminate(nil)
+            } label: {
+                Label("Quit Ports On", systemImage: "power")
+            }
+            .controlSize(.large)
+            .frame(maxWidth: .infinity)
         }
         .padding(16)
         .frame(width: 220)
