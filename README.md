@@ -4,6 +4,8 @@
   <img src="github-header-banner.png" alt="Ports On — manage your ports on Mac" width="100%" />
 </p>
 
+[![Release](https://github.com/mhiqrambg/ports-on/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/mhiqrambg/ports-on/actions/workflows/release.yml)
+
 A menu bar and window app for macOS that lists every TCP port currently listening on your Mac, the process that owns each one, and which user it runs as. You can stop a process you own from the window.
 
 ## Status
