@@ -89,7 +89,10 @@ extension ServiceInfo {
         // omp is a CLI/agent (stdio); identify by process name only — no fixed port.
         ServiceInfo(id: "omp", displayName: "omp",
                     knownPorts: [], processNames: ["omp"]),
-        // AirPlay/Continuity are macOS system services on fixed ports.
+        // `wrangler dev` runs the workerd runtime (Cloudflare Workers). Port is assigned by
+        // wrangler and changes per run, so identify by process name only.
+        ServiceInfo(id: "wrangler", displayName: "Wrangler (Cloudflare Workers)",
+                    knownPorts: [], processNames: ["workerd"]),
         ServiceInfo(id: "airplay", displayName: "AirPlay",
                     knownPorts: [7000, 5000], processNames: ["ControlCenter"]),
         ServiceInfo(id: "rapport", displayName: "Rapport (Continuity)",

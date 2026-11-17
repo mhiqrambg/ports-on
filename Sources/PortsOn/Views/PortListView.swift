@@ -135,6 +135,8 @@ struct PortListView: View {
         case "postgres", "mysql", "mongodb", "redis": return "cylinder"
         case "airplay": return "airplayaudio"
         case "sshd": return "lock.shield"
+        case "wrangler": return "cloud"
+        case "omp", "opencode": return "cpu"
         default: return "dot"
         }
     }
