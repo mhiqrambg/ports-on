@@ -48,9 +48,16 @@ public struct ServiceInfo: Identifiable, Hashable, Sendable {
 }
 
 extension ServiceInfo {
+    /// Identification relies primarily on the PROCESS NAME, which is stable regardless of
+    /// what port a service is configured to listen on. `knownPorts` is only a fallback hint
+    /// for processes we cannot see by name (e.g. the process shows a generic name), so it
+    /// intentionally holds ONLY well-known IANA / documented-default ports. Dev servers
+    /// (next, astro, vite, rails, django, php, opencode…) are deliberately left WITHOUT a
+    /// knownPort because their port is user-configurable and routinely changes — guessing a
+    /// fixed number produced false labels (opencode was mislabeled "omp" on 4096).
     public static let builtin: [ServiceInfo] = [
         ServiceInfo(id: "nginx", displayName: "nginx",
-                    knownPorts: [80, 443, 8080, 8000],
+                    knownPorts: [80, 443],
                     processNames: ["nginx"]),
         ServiceInfo(id: "docker", displayName: "Docker",
                     knownPorts: [2375, 2376],
@@ -66,25 +73,28 @@ extension ServiceInfo {
         ServiceInfo(id: "nodejs", displayName: "Node.js",
                     knownPorts: [], processNames: ["node"]),
         ServiceInfo(id: "nextjs", displayName: "Next.js",
-                    knownPorts: [3000], processNames: ["next-server", "next"]),
+                    knownPorts: [], processNames: ["next-server", "next"]),
         ServiceInfo(id: "astro", displayName: "Astro",
-                    knownPorts: [4321], processNames: ["astro"]),
+                    knownPorts: [], processNames: ["astro"]),
         ServiceInfo(id: "vite", displayName: "Vite",
-                    knownPorts: [5173], processNames: ["vite", "node"]),
+                    knownPorts: [], processNames: ["vite"]),
         ServiceInfo(id: "django", displayName: "Django",
-                    knownPorts: [8000, 8001], processNames: ["python", "manage.py"]),
+                    knownPorts: [], processNames: ["python", "manage.py"]),
         ServiceInfo(id: "rails", displayName: "Rails",
-                    knownPorts: [3000], processNames: ["ruby", "rails"]),
+                    knownPorts: [], processNames: ["ruby", "rails"]),
         ServiceInfo(id: "php", displayName: "PHP",
-                    knownPorts: [9000, 9003], processNames: ["php-fpm", "php"]),
+                    knownPorts: [], processNames: ["php-fpm", "php"]),
         ServiceInfo(id: "opencode", displayName: "OpenCode",
-                    knownPorts: [4848], processNames: ["opencode"]),
+                    knownPorts: [], processNames: ["opencode"]),
+        // omp is a CLI/agent (stdio); identify by process name only — no fixed port.
         ServiceInfo(id: "omp", displayName: "omp",
-                    knownPorts: [4096], processNames: ["omp"]),
+                    knownPorts: [], processNames: ["omp"]),
+        // AirPlay/Continuity are macOS system services on fixed ports.
         ServiceInfo(id: "airplay", displayName: "AirPlay",
-                    knownPorts: [7000, 5000], processNames: ["ControlCe"]),
+                    knownPorts: [7000, 5000], processNames: ["ControlCenter"]),
         ServiceInfo(id: "rapport", displayName: "Rapport (Continuity)",
                     knownPorts: [], processNames: ["rapportd"]),
+        // IANA well-known, genuinely fixed.
         ServiceInfo(id: "sshd", displayName: "SSH",
                     knownPorts: [22], processNames: ["sshd"]),
         ServiceInfo(id: "dnsmasq", displayName: "DNS (dnsmasq)",
