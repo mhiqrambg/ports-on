@@ -24,11 +24,9 @@ jobs:
           swift --version
           xcrun --sdk macosx --show-sdk-version
 
-      - name: Build universal binary
-        run: swift build -c release --arch arm64 --arch x86_64
-
       - name: Run tests
         run: swift test
+
 
       - name: Bundle app
         run: ./bundle.sh release

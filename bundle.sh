@@ -5,11 +5,11 @@ set -euo pipefail
 CONFIG="${1:-debug}"
 BUNDLE_ID="dev.mhiqram.portson"
 APP_NAME="Ports On"
-BIN=".build/debug/PortsOn"
-[[ "$CONFIG" == "release" ]] && BIN=".build/release/PortsOn"
 
-echo "Building ($CONFIG, universal arm64+x86_64)…"
+# Build the universal binary (arm64 + x86_64) into .build/<config>/.
+# SwiftPM writes a universal binary here when --arch is passed twice.
 swift build -c "$CONFIG" --arch arm64 --arch x86_64
+BIN=".build/$CONFIG/PortsOn"
 
 APP=".build/$APP_NAME.app"
 rm -rf "$APP"
