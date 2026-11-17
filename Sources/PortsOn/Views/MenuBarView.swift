@@ -32,6 +32,19 @@ struct MenuBarView: View {
             .controlSize(.large)
             .frame(maxWidth: .infinity, alignment: .leading)
 
+            Button {
+                // Present the app's Settings scene.
+                if #available(macOS 14.0, *) {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                } else {
+                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                }
+            } label: {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .controlSize(.large)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             Button(role: .destructive) {
                 NSApp.terminate(nil)
             } label: {
