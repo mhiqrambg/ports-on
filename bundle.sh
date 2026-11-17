@@ -25,7 +25,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleExecutable</key><string>PortsOn</string>
     <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
     <key>CFBundleName</key><string>$APP_NAME</string>
-    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>LSMinimumSystemVersion</key><string>26.0</string>
@@ -36,6 +36,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 cp "$BIN" "$APP/Contents/MacOS/PortsOn"
+
+# App icon (shows in dock, Finder, and the DMG window).
+if [[ -f "Resources/AppIcon.icns" ]]; then
+  cp "Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 echo "Architectures: $(lipo -archs "$APP/Contents/MacOS/PortsOn")"
 echo "Bundled: $APP"
