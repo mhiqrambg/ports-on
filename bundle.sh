@@ -6,10 +6,12 @@ CONFIG="${1:-debug}"
 BUNDLE_ID="dev.mhiqram.portson"
 APP_NAME="Ports On"
 
-# Build the universal binary (arm64 + x86_64) into .build/<config>/.
-# SwiftPM writes a universal binary here when --arch is passed twice.
+# Build the universal binary (arm64 + x86_64). SwiftPM puts a multi-arch build in
+# .build/out/Products/<Config>/, NOT .build/<config>/ — ask it where rather than guess.
 swift build -c "$CONFIG" --arch arm64 --arch x86_64
-BIN=".build/$CONFIG/PortsOn"
+BIN_DIR="$(swift build --show-bin-path -c "$CONFIG" --arch arm64 --arch x86_64)"
+BIN="$BIN_DIR/PortsOn"
+[[ -f "$BIN" ]] || { echo "error: expected built binary at $BIN" >&2; exit 1; }
 
 APP=".build/$APP_NAME.app"
 rm -rf "$APP"
