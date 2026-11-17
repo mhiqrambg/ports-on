@@ -131,16 +131,22 @@ struct PortListView: View {
     /// Icon is a visual hint keyed off the real process name — purely cosmetic, not a claim
     /// about what the process is. Anything unrecognized gets a plain dot.
     private func iconName(for processName: String) -> String {
-        switch processName.lowercased() {
+        let name = processName.lowercased()
+        switch name {
         case "nginx": return "server.rack"
         case "docker", "dockerd", "com.docker.backend": return "shippingbox"
-        case "node": return "curlybraces"
+        case "node": return "hexagon"
         case "postgres", "mysqld", "mongod", "redis-server": return "cylinder"
         case "controlcenter": return "airplayaudio"
         case "sshd": return "lock.shield"
         case "workerd": return "cloud"
         case "omp", "opencode": return "cpu"
-        default: return "dot"
+        default:
+            // Browsers have long, versioned names — match by prefix.
+            if name.hasPrefix("google chrome") || name.hasPrefix("chromium") {
+                return "globe"
+            }
+            return "dot"
         }
     }
 
