@@ -20,23 +20,25 @@ struct MenuBarView: View {
 
             Divider()
 
-            Button("Open Ports On") {
+            Button {
                 NSApp.activate(ignoringOtherApps: true)
                 for window in NSApp.windows where window.canBecomeMain {
                     window.makeKeyAndOrderFront(nil)
                 }
+            } label: {
+                Label("Open", systemImage: "arrow.up.forward.app")
             }
             .keyboardShortcut(.defaultAction)
             .controlSize(.large)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Button(role: .destructive) {
                 NSApp.terminate(nil)
             } label: {
-                Label("Quit Ports On", systemImage: "power")
+                Label("Quit", systemImage: "power")
             }
             .controlSize(.large)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
         .frame(width: 220)
