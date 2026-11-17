@@ -48,10 +48,15 @@ public struct LsofPortEnumerator: PortEnumerating {
         }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
+        let status = process.terminationStatus
+        // lsof exits 1 when it found no matching sockets. That is a valid empty result,
+        // not a failure (a clean CI runner can legitimately have zero listeners). Any
+        // other non-zero status is a real failure.
+        guard status == 0 || status == 1 else {
             let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             throw PortScanError.lsofFailed(err)
         }
+        if status == 1 { return "" }
         guard let text = String(data: data, encoding: .utf8) else {
             throw PortScanError.lsofFailed("non-UTF8 output")
         }
